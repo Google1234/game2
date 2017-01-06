@@ -17,6 +17,17 @@ import os
 from caffe.proto import caffe_pb2
 import google.protobuf as pb2
 
+import signal
+import time
+class GracefulKiller:
+  kill_now = False
+  def __init__(self):
+    signal.signal(signal.SIGINT, self.exit_gracefully)
+    signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+  def exit_gracefully(self,signum, frame):
+    self.kill_now = True
+
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
     This wrapper gives us control over he snapshotting process, which we
@@ -95,19 +106,19 @@ class SolverWrapper(object):
         last_snapshot_iter = -1
         timer = Timer()
         model_paths = []
+	killer = GracefulKiller()
         while self.solver.iter < max_iters:
             # Make one SGD update
-            try :
-	        timer.tic()
-                self.solver.step(1)
-                timer.toc()
-                if self.solver.iter % (10 * self.solver_param.display) == 0:
-                    print 'speed: {:.3f}s / iter'.format(timer.average_time)
+	    timer.tic()
+            self.solver.step(1)
+            timer.toc()
+            if self.solver.iter % (10 * self.solver_param.display) == 0:
+                print 'speed: {:.3f}s / iter'.format(timer.average_time)
 
-                if self.solver.iter % cfg.TRAIN.SNAPSHOT_ITERS == 0:
-                    last_snapshot_iter = self.solver.iter
-                    model_paths.append(self.snapshot())
-	    except KeyboardInterrupt :
+            if self.solver.iter % cfg.TRAIN.SNAPSHOT_ITERS == 0:
+                last_snapshot_iter = self.solver.iter
+                model_paths.append(self.snapshot())
+	    if killer.kill_now:
 		self.snapshot()
 		raise KeyboardInterrupt
         if last_snapshot_iter != self.solver.iter:
