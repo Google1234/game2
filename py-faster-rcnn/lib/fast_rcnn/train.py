@@ -97,16 +97,19 @@ class SolverWrapper(object):
         model_paths = []
         while self.solver.iter < max_iters:
             # Make one SGD update
-            timer.tic()
-            self.solver.step(1)
-            timer.toc()
-            if self.solver.iter % (10 * self.solver_param.display) == 0:
-                print 'speed: {:.3f}s / iter'.format(timer.average_time)
+            try :
+	        timer.tic()
+                self.solver.step(1)
+                timer.toc()
+                if self.solver.iter % (10 * self.solver_param.display) == 0:
+                    print 'speed: {:.3f}s / iter'.format(timer.average_time)
 
-            if self.solver.iter % cfg.TRAIN.SNAPSHOT_ITERS == 0:
-                last_snapshot_iter = self.solver.iter
-                model_paths.append(self.snapshot())
-
+                if self.solver.iter % cfg.TRAIN.SNAPSHOT_ITERS == 0:
+                    last_snapshot_iter = self.solver.iter
+                    model_paths.append(self.snapshot())
+	    except KeyboardInterrupt :
+		self.snapshot()
+		raise KeyboardInterrupt
         if last_snapshot_iter != self.solver.iter:
             model_paths.append(self.snapshot())
         return model_paths

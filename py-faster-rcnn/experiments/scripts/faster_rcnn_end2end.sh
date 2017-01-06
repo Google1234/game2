@@ -12,10 +12,12 @@ set -e
 
 export PYTHONUNBUFFERED="True"
 
-GPU_ID=$1
-NET=$2
+GPU_ID=0
+NET=$1
 NET_lc=${NET,,}
-DATASET=$3
+DATASET=pascal_voc
+snap_model=$2
+ITERS=$3
 
 array=( $@ )
 len=${#array[@]}
@@ -27,7 +29,7 @@ case $DATASET in
     TRAIN_IMDB="voc_2007_trainval"
     TEST_IMDB="voc_2007_test"
     PT_DIR="pascal_voc"
-    ITERS=70000
+    #ITERS=70000
     ;;
   coco)
     # This is a very long and slow training schedule
@@ -36,7 +38,7 @@ case $DATASET in
     TRAIN_IMDB="coco_2014_train"
     TEST_IMDB="coco_2014_minival"
     PT_DIR="coco"
-    ITERS=490000
+    #ITERS=490000
     ;;
   *)
     echo "No dataset given"
@@ -50,7 +52,7 @@ echo Logging output to "$LOG"
 
 time ./tools/train_net.py --gpu ${GPU_ID} \
   --solver models/${PT_DIR}/${NET}/faster_rcnn_end2end/solver.prototxt \
-  --weights data/imagenet_models/${NET}.v2.caffemodel \
+  --weights ${snap_model} \
   --imdb ${TRAIN_IMDB} \
   --iters ${ITERS} \
   --cfg experiments/cfgs/faster_rcnn_end2end.yml \

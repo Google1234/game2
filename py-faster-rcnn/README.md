@@ -1,3 +1,11 @@
+how to use:
+  cd $FRCN_ROOT
+  ./experiments/scripts/faster_rcnn_end2end.sh  [NET] [snap_path] [iter_times] 
+for example :
+train from imagenet model:
+  ./experiments/scripts/faster_rcnn_end2end.sh  VGG16 data/imagenet_models/VGG16.v2.caffemodel 70000
+train from snap model:
+   ./experiments/scripts/faster_rcnn_end2end.sh VGG16 output/faster_rcnn_end2end/voc_2007_trainval/[snap_name] 100000 
 ### Disclaimer
 
 The official Faster R-CNN code (written in MATLAB) is available [here](https://github.com/ShaoqingRen/faster_rcnn).
@@ -71,9 +79,6 @@ If you find Faster R-CNN useful in your research, please consider citing:
 
 ### Installation (sufficient for the demo)
 
-1. Clone the Faster R-CNN repository
-  ```Shell
-  # Make sure to clone with --recursive
   git clone --recursive https://github.com/rbgirshick/py-faster-rcnn.git
   ```
 
@@ -175,6 +180,9 @@ ZF was trained at MSRA.
 ### Usage
 
 To train and test a Faster R-CNN detector using the **alternating optimization** algorithm from our NIPS 2015 paper, use `experiments/scripts/faster_rcnn_alt_opt.sh`.
+Output is written underneath `$FRCN_ROOT/output`.
+
+```Shell
 Output is written underneath `$FRCN_ROOT/output`.
 
 ```Shell
