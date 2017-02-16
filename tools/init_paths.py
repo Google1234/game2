@@ -17,7 +17,11 @@ add_path(cly_path)
 config_path = osp.join(this_dir)
 add_path(config_path)
 
+# Add caffe to PYTHONPATH
+caffe_path = osp.join(this_dir, '..', 'py-faster-rcnn','caffe-fast-rcnn', 'python')
+add_path(caffe_path)
 
 # Add lib to PYTHONPATH
 lib_path = osp.join(this_dir, '..','py-faster-rcnn', 'lib')
 add_path(lib_path)
+

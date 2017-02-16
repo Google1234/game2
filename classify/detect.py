@@ -28,7 +28,7 @@ SCALES=(600,) #__C.TEST.SCALES = (600,)
 MAX_SIZE=1000 #__C.TEST.MAX_SIZE = 1000
 thresh=0.05 #pre score low than this value was discard
 NMS=0.3 #__C.TEST.NMS = 0.3
-det_image_save_path=config.data_path+"det_result/"
+det_image_save_path=config.fish_submit_images+"det_result/"
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -193,7 +193,11 @@ for i in xrange(num_images):
         cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
         cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
             .astype(np.float32, copy=False)
-        keep = gpu_nms(cls_dets, NMS, gpu_id)
+        ####test
+	print inds
+	print boxes.shape
+	######
+	keep = gpu_nms(cls_dets, NMS, gpu_id)
         cls_dets = cls_dets[keep, :]
 
         vis_save_detections(im, imdb._image_index[j],imdb.classes[j], cls_dets)#plot detection and save image
