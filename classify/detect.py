@@ -3,13 +3,16 @@ import config
 import caffe
 from datasets.factory import get_imdb
 import cv2
+import matplotlib.pyplot as plt
+plt.switch_backend('agg')#must add this ,other :RuntimeError: Invalid DISPLAY variable
 
-relative_path="py-faster-rcnn"
+save_path=config.train_dection_results
+colors=config.colors
 #######################################
 #load model#
 gpu_id=0
-prototxt=relative_path+"/models/pascal_voc/VGG16/faster_rcnn_end2end/test.prototxt"
-caffemodel=relative_path+"/output/faster_rcnn_end2end/voc_2007_trainval/vgg16_faster_rcnn_iter_92264.caffemodel"
+prototxt="py-faster-rcnn/models/pascal_voc/VGG16/faster_rcnn_end2end/test.prototxt"
+caffemodel="py-faster-rcnn/output/faster_rcnn_end2end/voc_2007_trainval/vgg16_faster_rcnn_iter_92264.caffemodel"
 imdb_name="voc_2007_test"
 
 caffe.set_mode_gpu()
@@ -28,7 +31,6 @@ SCALES=(600,) #__C.TEST.SCALES = (600,)
 MAX_SIZE=1000 #__C.TEST.MAX_SIZE = 1000
 thresh=0.05 #pre score low than this value was discard
 NMS=0.3 #__C.TEST.NMS = 0.3
-det_image_save_path=config.fish_submit_images+"det_result/"
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -122,36 +124,37 @@ def clip_boxes(boxes, im_shape):
     # y2 < im_shape[0]
     boxes[:, 3::4] = np.maximum(np.minimum(boxes[:, 3::4], im_shape[0] - 1), 0)
     return boxes
-def vis_save_detections(im, _image_index,class_name, dets, thresh=0.3):
+def vis_save_detections(im, _image_index,all_boxes, thresh=0.0):
     """Visual debugging of detections."""
-    import matplotlib.pyplot as plt
     im = im[:, :, (2, 1, 0)]
-    for i in xrange(np.minimum(10, dets.shape[0])):
-        bbox = dets[i, :4]
-        score = dets[i, -1]
-        if score > thresh:
-            plt.cla()
-            plt.imshow(im)
-            plt.gca().add_patch(
+    plt.cla()
+    for j in xrange(1, imdb.num_classes): #escape j=0,background
+	dets=all_boxes[j]
+        #for i in xrange(np.minimum(10, dets.shape[0])):
+        for i in xrange(dets.shape[0]):
+	    bbox = dets[i, :4]
+            score = dets[i, -1]
+            if score > thresh:
+                plt.imshow(im)
+                plt.gca().add_patch(
                 plt.Rectangle((bbox[0], bbox[1]),
                               bbox[2] - bbox[0],
                               bbox[3] - bbox[1], fill=False,
-                              edgecolor='g', linewidth=3)
+                              edgecolor=colors[imdb._classes[j]], linewidth=2)
                 )
-            plt.title('{}  {:.3f}'.format(class_name, score))
-            #plt.show()
-
-    if os.path.exists(det_image_save_path)==False:
-        os.mkdir(det_image_save_path)
-    plt.savefig("demo_result/"+_image_index+"jpg")
+                #plt.title('{}  {:.3f}'.format(imdb.classes[j], score))
+		plt.text(bbox[0], bbox[1],'{} {:.3f}'.format(imdb._classes[j], score),fontsize=10,color='r')
+                plt.show()
+    if os.path.exists(save_path)==False:
+        os.makedirs(save_path)
+    plt.savefig(save_path+_image_index)
 
 num_images = len(imdb.image_index)
 # all detections are collected into:
 #    all_boxes[cls][image] = N x 5 array of detections in
 #    (x1, y1, x2, y2, score)
-all_boxes = [[[] for _ in xrange(num_images)]
-             for _ in xrange(imdb.num_classes)]
-
+all_boxes = [[[] for _ in xrange(imdb.num_classes)]
+             for _ in xrange(num_images)]
 for i in xrange(num_images):
     im = cv2.imread(imdb.image_path_at(i))
 
@@ -166,7 +169,7 @@ for i in xrange(num_images):
     # reshape network inputs
     net.blobs['data'].reshape(*(blobs['data'].shape))
     net.blobs['im_info'].reshape(*(blobs['im_info'].shape))
-
+  
     # do forward
     forward_kwargs = {'data': blobs['data'].astype(np.float32, copy=False)}
     forward_kwargs['im_info'] = blobs['im_info'].astype(np.float32, copy=False)
@@ -176,29 +179,29 @@ for i in xrange(num_images):
     assert len(im_scales) == 1, "Only single-image batch implemented"
     rois = net.blobs['rois'].data.copy()
     # unscale back to raw image space
-    boxes = rois[:, 1:5] / im_scales[0]
-
+    boxes = rois[:, 1:5] / im_scales[0]    
     scores = blobs_out['cls_prob']
     # Apply bounding-box regression deltas
     box_deltas = blobs_out['bbox_pred']
     pred_boxes = bbox_transform_inv(boxes, box_deltas)
     pred_boxes = clip_boxes(pred_boxes, im.shape)
     #return scores, pred_boxes
-
+    
     #process network output
     # skip j = 0, because it's the background class
     for j in xrange(1, imdb.num_classes):
         inds = np.where(scores[:, j] > thresh)[0]
         cls_scores = scores[inds, j]
-        cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
+        cls_boxes = pred_boxes[inds, j * 4:(j + 1) * 4]
         cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
-            .astype(np.float32, copy=False)
-        ####test
-	print inds
-	print boxes.shape
-	######
-	keep = gpu_nms(cls_dets, NMS, gpu_id)
+                .astype(np.float32, copy=False) 
+	if cls_dets.shape[0]==0:
+	    keep=[]
+	else:	
+            keep = gpu_nms(cls_dets, NMS, gpu_id)
         cls_dets = cls_dets[keep, :]
-
-        vis_save_detections(im, imdb._image_index[j],imdb.classes[j], cls_dets)#plot detection and save image
-        all_boxes[j][i] = cls_dets
+ 
+        all_boxes[i][j] = cls_dets
+    vis_save_detections(im, imdb._image_index[i], all_boxes[i])#plot detection and save image
+    print "Process image",imdb._image_index[i]
+    print 'fish',i,'---->total ',num_images
