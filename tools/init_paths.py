@@ -10,6 +10,14 @@ def add_path(path):
 this_dir = osp.dirname(__file__)
 
 # Add classify dir to PYTHONPATH
+cly_path = osp.join(this_dir, '..', 'net')
+add_path(cly_path)
+
+# Add lib dir to PYTHONPATH
+cly_path = osp.join(this_dir, '..', 'lib')
+add_path(cly_path)
+
+# Add classify dir to PYTHONPATH
 cly_path = osp.join(this_dir, '..', 'classify')
 add_path(cly_path)
 
@@ -24,4 +32,3 @@ add_path(caffe_path)
 # Add lib to PYTHONPATH
 lib_path = osp.join(this_dir, '..','py-faster-rcnn', 'lib')
 add_path(lib_path)
-
