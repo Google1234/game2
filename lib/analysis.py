@@ -26,11 +26,13 @@ def split_to_files(images_set):
         image_indexs=data[data[label]>0]["image"]
         from shutil import copyfile
         images_src_path=os.path.join(config.fish_data_dir,'JPEGImages',images_set)#data/fish_data/submit/JPEGImages
-        dest_path=os.path.join(path,label)
+        image_detected_path=os.path.join(config.fish_data_dir,'Detections',images_set)
+	dest_path=os.path.join(path,label)
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
         for name in image_indexs:
-            copyfile(os.path.join(images_src_path,name),os.path.join(dest_path,name))
+            copyfile(os.path.join(image_detected_path,name[:-3]+"png"),os.path.join(dest_path,name[:-3]+"png")) # copy detected .png file
+	    copyfile(os.path.join(images_src_path,name),os.path.join(dest_path,name)) # copy clear src .jpg file
         with open(os.path.join(path,label+".txt"),"wb") as file:
             file.writelines(["%s\n" % item  for item in image_indexs])
 if __name__ == '__main__':
